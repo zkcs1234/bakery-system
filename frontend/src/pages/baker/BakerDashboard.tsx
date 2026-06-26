@@ -514,8 +514,6 @@ interface TaskCardProps {
 function TaskCard({ task, isToday, updating, allTasks, onUpdateStatus }: TaskCardProps) {
   const [expanded, setExpanded]             = useState(false);
   const [batchesPerLoad, setBatchesPerLoad] = useState(1);
-  const [loads, setLoads]                   = useState<LoadState[]>([]);
-  const [started, setStarted]               = useState(false);
   const [startError, setStartError]         = useState('');
 
   const planItem  = task.production_plan_items as {
@@ -548,6 +546,13 @@ function TaskCard({ task, isToday, updating, allTasks, onUpdateStatus }: TaskCar
       return { loadNumber: i + 1, batches, completedStepIds: [], outcome: null, isDone: false };
     });
   };
+
+  // If the task is already in_progress (e.g. after a page refresh), auto-initialize
+  // started=true and loads so the baker can see their work and continue.
+  const [started, setStarted] = useState<boolean>(() => task.status === 'in_progress');
+  const [loads, setLoads]     = useState<LoadState[]>(() =>
+    task.status === 'in_progress' ? initLoads(batchesPerLoad) : []
+  );
 
   const handleStartBaking = async () => {
     if (!isToday) return;

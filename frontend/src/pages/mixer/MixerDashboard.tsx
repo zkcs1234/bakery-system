@@ -587,8 +587,6 @@ interface TaskCardProps {
 function TaskCard({ task, isToday, dateStr, updating, allTasks, onUpdateStatus }: TaskCardProps) {
   const [expanded, setExpanded]               = useState(false);
   const [batchesPerRound, setBatchesPerRound] = useState(2);
-  const [rounds, setRounds]                   = useState<RoundState[]>([]);
-  const [started, setStarted]                 = useState(false); // planner confirmed
   const [startError, setStartError]           = useState('');
 
   const planItem  = task.production_plan_items as { products?: { name: string; dough_type: string }; tasks?: Array<{ task_role?: string; status?: string }> } | null;
@@ -618,6 +616,13 @@ function TaskCard({ task, isToday, dateStr, updating, allTasks, onUpdateStatus }
       };
     });
   };
+
+  // If the task is already in_progress (e.g. after a page refresh), auto-initialize
+  // started=true and rounds so the mixer can see their work and continue.
+  const [started, setStarted] = useState<boolean>(() => task.status === 'in_progress');
+  const [rounds, setRounds]   = useState<RoundState[]>(() =>
+    task.status === 'in_progress' ? initRounds(batchesPerRound) : []
+  );
 
   const handleStartMixing = async () => {
     if (!isToday) return;
