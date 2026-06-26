@@ -54,7 +54,7 @@ export function useRealtimeSubscription<T extends { id?: string }>(
             .from(table)
             .select(columns);
           if (!fetchErr && rows) {
-            if (!cancelled) setData(rows as T[]);
+            if (!cancelled) setData(rows as unknown as T[]);
             return;
           }
         } catch {
