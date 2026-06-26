@@ -500,25 +500,25 @@ router.post(
       return;
     }
 
-    const { data: planItems, error: planItemsErr } = await supabase
-      .from('production_plan_items')
-      .select('product_id, total_batches')
-      .eq('plan_id', planItem.plan_id);
-
-    if (planItemsErr) {
-      res.status(500).json({ error: planItemsErr.message });
-      return;
-    }
-
-    // Remove existing tasks for this plan item & roles
+    // Collect the distinct roles being submitted so we can delete only those roles.
+    // This is an atomic replace: delete old tasks for submitted roles, insert new ones.
     const roles = [...new Set(assignments.map((a: { task_role: string }) => a.task_role))];
-    await supabase
+
+    // Only delete tasks that are still pending — don't touch in_progress or completed tasks
+    // to avoid stripping workers mid-work.
+    const { error: deleteErr } = await supabase
       .from('tasks')
       .delete()
       .eq('plan_item_id', plan_item_id)
-      .in('task_role', roles);
+      .in('task_role', roles)
+      .eq('status', 'pending');
 
-    // Insert new assignments
+    if (deleteErr) {
+      res.status(500).json({ error: `Failed to clear old assignments: ${deleteErr.message}` });
+      return;
+    }
+
+    // Insert all new assignments in one batch
     const taskRows = assignments.map((a: {
       assigned_to: string;
       task_role: string;
@@ -547,7 +547,7 @@ router.post(
       action: 'ASSIGN_TASKS',
       entity: 'production_plan_items',
       entity_id: plan_item_id,
-      meta: { task_count: taskRows.length },
+      meta: { task_count: taskRows.length, roles },
     });
 
     res.status(201).json({ tasks });

@@ -357,8 +357,9 @@ export default function TaskAssignment() {
     : false;
 
   const [assignments, setAssignments] = useState<Record<string, Record<TaskRole, AssignRow[]>>>({});
-  const [saving, setSaving] = useState<string | null>(null);
-  const [saved, setSaved]   = useState<Record<string, boolean>>({});
+  const [saving, setSaving]   = useState<string | null>(null);
+  const [saved, setSaved]     = useState<Record<string, boolean>>({});
+  const [saveError, setSaveError] = useState<Record<string, string>>({});
 
   useEffect(() => {
     Promise.all([api.get('/production/plans'), api.get('/users'), api.get('/specialties'), api.get('/orders', { params: { status: 'approved', limit: 100 } })])
@@ -399,19 +400,25 @@ export default function TaskAssignment() {
       ((planData.production_plan_items ?? []) as PlanItemFull[]).forEach(item => {
         const byRole: Record<TaskRole, AssignRow[]> = { scaling: [], mixing: [], baking: [], repacking: [] };
         (item.tasks ?? []).forEach(t => {
+          // Include ALL tasks in prefill, including completed ones, so the supervisor
+          // can see who did the work. Completed tasks are shown read-only via completedTask chip.
+          // Only skip tasks that have no assigned user at all.
+          if (!t.assigned_user) return;
+          // Don't put completed tasks back into editable rows — they're displayed via the chip.
           if (t.status === 'completed') return;
-          if (t.assigned_user) byRole[t.task_role].push({ user_id: t.assigned_user.id, batches: t.batches_assigned });
+          byRole[t.task_role].push({ user_id: t.assigned_user.id, batches: t.batches_assigned });
         });
         prefill[item.id] = byRole;
       });
       setAssignments(prefill);
-        // Mark items as saved if the server returned assigned tasks for them.
-        const savedMap: Record<string, boolean> = {};
-        ((planData.production_plan_items ?? []) as PlanItemFull[]).forEach(item => {
-          const hasAssigned = (item.tasks ?? []).filter((t: any) => t.assigned_user && t.status !== 'completed').length > 0;
-          savedMap[item.id] = hasAssigned;
-        });
-        setSaved(savedMap);
+      // Mark items as saved if the server has ANY assigned task (including completed).
+      const savedMap: Record<string, boolean> = {};
+      ((planData.production_plan_items ?? []) as PlanItemFull[]).forEach(item => {
+        const hasAssigned = (item.tasks ?? []).some((t: ExistingTask) => !!t.assigned_user);
+        savedMap[item.id] = hasAssigned;
+      });
+      setSaved(savedMap);
+      setSaveError({});
       if (planData.id) loadWorkload(planData.id);
     }).finally(() => setLoading(false));
   }, []);
@@ -423,6 +430,7 @@ export default function TaskAssignment() {
       return { ...prev, [planItemId]: { ...item, [role]: [...item[role], { user_id: '', batches: 0 }] } };
     });
     setSaved(s => ({ ...s, [planItemId]: false }));
+    setSaveError(e => ({ ...e, [planItemId]: '' }));
   };
 
   const removeRow = (planItemId: string, role: TaskRole, idx: number) => {
@@ -433,6 +441,7 @@ export default function TaskAssignment() {
       return { ...prev, [planItemId]: { ...item, [role]: rows } };
     });
     setSaved(s => ({ ...s, [planItemId]: false }));
+    setSaveError(e => ({ ...e, [planItemId]: '' }));
   };
 
   const updateRow = (planItemId: string, role: TaskRole, idx: number, field: 'user_id' | 'batches', value: string | number) => {
@@ -443,6 +452,7 @@ export default function TaskAssignment() {
       return { ...prev, [planItemId]: { ...item, [role]: rows } };
     });
     setSaved(s => ({ ...s, [planItemId]: false }));
+    setSaveError(e => ({ ...e, [planItemId]: '' }));
   };
 
   const ensureRow = (planItemId: string, role: TaskRole, totalBatches: number) => {
@@ -473,27 +483,50 @@ export default function TaskAssignment() {
   const save = async (planItemId: string, total: number) => {
     if (!itemFullyValid(planItemId, total)) return;
     setSaving(planItemId);
+    setSaveError(e => ({ ...e, [planItemId]: '' }));
     try {
+      // Send all assigned roles in a single request to avoid partial-save failures.
+      // Collect every role that has valid rows.
+      const allAssignments: { assigned_to: string; task_role: string; batches_assigned: number }[] = [];
       for (const role of STAGES) {
         const rows = (assignments[planItemId]?.[role] ?? []).filter(r => r.user_id && r.batches > 0);
-        if (!rows.length) continue;
-        await api.post('/production/assign', {
-          plan_item_id: planItemId,
-          assignments: rows.map(r => ({ assigned_to: r.user_id, task_role: role, batches_assigned: r.batches })),
-        });
+        for (const r of rows) {
+          allAssignments.push({ assigned_to: r.user_id, task_role: role, batches_assigned: r.batches });
+        }
       }
+      if (!allAssignments.length) return;
+      // One atomic call — the backend deletes old tasks for the submitted roles and
+      // inserts new ones. Sending all roles together prevents partial-write state.
+      await api.post('/production/assign', {
+        plan_item_id: planItemId,
+        assignments: allAssignments,
+      });
       setSaved(s => ({ ...s, [planItemId]: true }));
       if (plan?.id) loadWorkload(plan.id);
-    } finally { setSaving(null); }
+    } catch (e: unknown) {
+      const msg =
+        (e as { response?: { data?: { error?: string } } })?.response?.data?.error
+        ?? 'Failed to save assignments. Please try again.';
+      setSaveError(prev => ({ ...prev, [planItemId]: msg }));
+    } finally {
+      setSaving(null);
+    }
   };
 
   // ── Render helpers ────────────────────────────────────────────────────────
-  const getEligible = (role: TaskRole, productId?: string) => {
-    let list = workers.filter(w => w.role === ROLE_TO_DB[role]);
+  const getEligible = (role: TaskRole, productId?: string, currentUserId?: string) => {
+    const list = workers.filter(w => w.role === ROLE_TO_DB[role]);
     if (role === 'baking' && productId) {
-      const filtered = list.filter(w => specialtyMap[w.id] && specialtyMap[w.id].has(productId));
-      // If there are any specialists, prefer them; otherwise fall back to all bakers
-      return filtered.length > 0 ? filtered : list;
+      const specialists = list.filter(w => specialtyMap[w.id]?.has(productId));
+      if (specialists.length > 0) {
+        // If the currently assigned baker is not a specialist, include them anyway
+        // so the dropdown shows the existing assignment and doesn't break validation.
+        if (currentUserId && !specialists.find(w => w.id === currentUserId)) {
+          const currentWorker = list.find(w => w.id === currentUserId);
+          return currentWorker ? [...specialists, currentWorker] : specialists;
+        }
+        return specialists;
+      }
     }
     return list;
   };
@@ -659,8 +692,11 @@ export default function TaskAssignment() {
               {/* Role grid — 2 columns */}
               <div style={S.roleGrid}>
                 {STAGES.map(role => {
-                  const eligible      = getEligible(role, product.id);
                   const rows          = assignments[item.id]?.[role] ?? [];
+                  // Pass the first assigned user's id so getEligible can include
+                  // a non-specialist baker who was auto-assigned by the backend.
+                  const firstUserId   = rows[0]?.user_id;
+                  const eligible      = getEligible(role, product.id, firstUserId);
                   const sum           = roleSum(item.id, role);
                   const ok            = roleValid(item.id, role, total);
                   const completedTask = (item.tasks ?? []).find(t => t.task_role === role && t.status === 'completed');
@@ -691,47 +727,52 @@ export default function TaskAssignment() {
                         </button>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {rows.map((row, idx) => (
-                            <div key={idx} style={S.workerRow}>
-                              {/* Worker dropdown */}
-                              <div style={S.selectWrap}>
-                                <select
-                                  style={S.workerSelect}
-                                  value={row.user_id}
-                                  onChange={e => updateRow(item.id, role, idx, 'user_id', e.target.value)}
-                                >
-                                  <option value="">Select worker…</option>
-                                  {eligible.length === 0
-                                    ? <option disabled>No workers available</option>
-                                    : eligible.map(w => {
-                                        const wl     = loadFor(w.id);
-                                        const suffix = wl?.is_overloaded
-                                          ? ' (overloaded)'
-                                          : (!wl || wl.batches_assigned === 0)
-                                          ? ' (free)'
-                                          : '';
-                                        return <option key={w.id} value={w.id}>{w.full_name}{suffix}</option>;
-                                      })}
-                                </select>
-                                <ChevronDown size={13} style={S.chevron} />
+                          {rows.map((row, idx) => {
+                            // For each row, ensure its current user_id is always in the list
+                            // (catches non-specialist bakers auto-assigned by backend).
+                            const rowEligible = getEligible(role, product.id, row.user_id);
+                            return (
+                              <div key={idx} style={S.workerRow}>
+                                {/* Worker dropdown */}
+                                <div style={S.selectWrap}>
+                                  <select
+                                    style={S.workerSelect}
+                                    value={row.user_id}
+                                    onChange={e => updateRow(item.id, role, idx, 'user_id', e.target.value)}
+                                  >
+                                    <option value="">Select worker…</option>
+                                    {rowEligible.length === 0
+                                      ? <option disabled>No workers available</option>
+                                      : rowEligible.map(w => {
+                                          const wl     = loadFor(w.id);
+                                          const suffix = wl?.is_overloaded
+                                            ? ' (overloaded)'
+                                            : (!wl || wl.batches_assigned === 0)
+                                            ? ' (free)'
+                                            : '';
+                                          return <option key={w.id} value={w.id}>{w.full_name}{suffix}</option>;
+                                        })}
+                                  </select>
+                                  <ChevronDown size={13} style={S.chevron} />
+                                </div>
+
+                                {/* Batch count — min 1 to prevent zero-batch rows */}
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={total}
+                                  style={S.batchInput}
+                                  value={row.batches}
+                                  onChange={e => updateRow(item.id, role, idx, 'batches', Number(e.target.value))}
+                                />
+
+                                {/* Remove */}
+                                <button onClick={() => removeRow(item.id, role, idx)} style={S.removeBtn} title="Remove">
+                                  <Trash2 size={13} />
+                                </button>
                               </div>
-
-                              {/* Batch count */}
-                              <input
-                                type="number"
-                                min={0}
-                                max={total}
-                                style={S.batchInput}
-                                value={row.batches}
-                                onChange={e => updateRow(item.id, role, idx, 'batches', Number(e.target.value))}
-                              />
-
-                              {/* Remove */}
-                              <button onClick={() => removeRow(item.id, role, idx)} style={S.removeBtn} title="Remove">
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
-                          ))}
+                            );
+                          })}
 
                           {/* Add another worker */}
                           <button onClick={() => addRow(item.id, role)} style={S.addWorkerBtn}>
@@ -755,6 +796,25 @@ export default function TaskAssignment() {
                   );
                 })}
               </div>
+
+              {/* Save error banner — shown below the role grid */}
+              {saveError[item.id] && (
+                <div style={{
+                  margin: '0 20px 16px',
+                  padding: '10px 14px',
+                  background: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  borderRadius: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  fontSize: 12,
+                  color: '#B91C1C',
+                }}>
+                  <AlertTriangle size={14} style={{ flexShrink: 0 }} />
+                  {saveError[item.id]}
+                </div>
+              )}
             </div>
           );
         })}
