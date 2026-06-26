@@ -1,0 +1,221 @@
+{
+  "designSystem": {
+    "name": "BreadCo Production Console",
+    "version": "1.0",
+    "description": "Admin/POS-style design system for a multi-branch bakery production management system. Clean, data-dense, register/dashboard aesthetic in deep navy blue and white. Use this file as the single source of truth when generating any new page or component for this system.",
+    "vibe": [
+      "POS / register console, not a customer-facing storefront",
+      "Clean, structured, data-forward",
+      "Deep navy blue + white, minimal accent color",
+      "Numbers and IDs are visually distinct from labels (monospace)",
+      "Status communicated through color-coded pills/dots, not icons alone"
+    ]
+  },
+
+  "colorPalette": {
+    "blue": {
+      "950": "#01102B",
+      "900": "#051D4D",
+      "700": "#0B2E70",
+      "600": "#103B8C",
+      "500": "#1E4FAD",
+      "100": "#DEE7F9",
+      "50": "#EEF2FA"
+    },
+    "neutral": {
+      "white": "#FFFFFF",
+      "ink": "#0E1B33",
+      "slate600": "#48597A",
+      "slate400": "#8C9AB8",
+      "border": "#DCE6F7"
+    },
+    "status": {
+      "success": "#0F9D58",
+      "successBg": "#E6F7EE",
+      "warning": "#C97A0E",
+      "warningBg": "#FCF1DF",
+      "danger": "#D6394A",
+      "dangerBg": "#FCE9EB"
+    },
+    "usageRules": [
+      "blue.950 and blue.900 are for the sidebar background gradient and the darkest text on white surfaces.",
+      "blue.700/600 are the primary interactive accent: active nav state text, links, primary buttons, active pipeline nodes.",
+      "blue.500 is for secondary accents and borders on active elements.",
+      "blue.100/50 are light tints for icon chips, selected backgrounds, and badge backgrounds on white surfaces. Never used as large background fills.",
+      "White (#FFFFFF) is the dominant surface color for all cards, panels, tables, and the main content area background.",
+      "ink is default body/heading text on white surfaces.",
+      "slate600/slate400 are for secondary text, captions, timestamps, placeholder/idle states.",
+      "success/warning/danger are reserved ONLY for status meaning (stock alerts, order status, delta indicators) — never used decoratively.",
+      "Never introduce a new hue (no green/purple/orange backgrounds) outside the status colors above."
+    ]
+  },
+
+  "typography": {
+    "fontFamilies": {
+      "display": "'Space Grotesk', sans-serif",
+      "body": "'Inter', sans-serif",
+      "mono": "'IBM Plex Mono', monospace"
+    },
+    "googleFontsImport": "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap",
+    "usageRules": [
+      "display (Space Grotesk, 600-700 weight) is used ONLY for: page titles (h1), panel titles, brand/logo text. Never for body copy or table cells.",
+      "body (Inter) is the default for all UI text: nav items, labels, table cells, descriptions, buttons.",
+      "mono (IBM Plex Mono, 500-600 weight) is used ONLY for data that reads like a register/receipt: KPI big numbers, order IDs, timestamps/ETAs, station counts, the clock in the topbar. This is a signature rule of the system — any numeric or ID value gets mono."
+    ],
+    "scale": {
+      "pageTitle": { "fontFamily": "display", "size": "21px", "weight": 700, "color": "blue.950" },
+      "panelTitle": { "fontFamily": "display", "size": "15px", "weight": 700, "color": "blue.950" },
+      "panelSubtitle": { "fontFamily": "body", "size": "11.5px", "weight": 400, "color": "slate600" },
+      "kpiValue": { "fontFamily": "mono", "size": "27px", "weight": 600, "color": "blue.950", "letterSpacing": "-0.01em" },
+      "kpiLabel": { "fontFamily": "body", "size": "12px", "weight": 500, "color": "slate600" },
+      "kpiDelta": { "fontFamily": "body", "size": "11.5px", "weight": 600 },
+      "navItem": { "fontFamily": "body", "size": "13.5px", "weight": 500 },
+      "tableHeader": { "fontFamily": "body", "size": "10.5px", "weight": 600, "textTransform": "uppercase", "letterSpacing": "0.05em", "color": "slate400" },
+      "tableCell": { "fontFamily": "body", "size": "13px", "weight": 400, "color": "ink" },
+      "monoData": { "fontFamily": "mono", "size": "12px-13px", "weight": 600 },
+      "pillLabel": { "fontFamily": "body", "size": "11px", "weight": 600 },
+      "caption": { "fontFamily": "mono", "size": "9.5px-10px", "weight": 500, "textTransform": "uppercase", "letterSpacing": "0.12em" }
+    }
+  },
+
+  "layout": {
+    "structure": "Two-column app shell: fixed-width sidebar (left) + fluid main content (right).",
+    "sidebar": {
+      "width": "236px",
+      "position": "sticky, full viewport height",
+      "background": "linear-gradient(180deg, blue.950, blue.900 60%)",
+      "padding": "22px 16px 20px",
+      "sections": ["brand/logo", "nav group: Overview", "nav group: Operations", "nav group: System", "sidebar footer: user avatar + name + role, pinned to bottom"]
+    },
+    "mainContent": {
+      "padding": "20px 28px 40px",
+      "maxWidth": "1400px",
+      "background": "blue.50",
+      "sections": [
+        "topbar (page title + subtitle, left; branch selector + clock + icon buttons + avatar, right)",
+        "KPI row: 4-column grid of metric cards",
+        "primary panel: full-width feature panel (e.g. production pipeline tracker)",
+        "lower grid: 1.6fr / 1fr split — main table panel (left), stacked smaller panels (right)"
+      ]
+    },
+    "grid": {
+      "kpiRow": "grid-template-columns: repeat(4, 1fr); gap: 14px;",
+      "lowerGrid": "grid-template-columns: 1.6fr 1fr; gap: 18px;"
+    },
+    "responsiveNote": "On narrow viewports, collapse kpiRow to 2 columns, lowerGrid to 1 column, and sidebar to an icon-only or off-canvas drawer."
+  },
+
+  "components": {
+    "card": {
+      "background": "white",
+      "border": "1px solid border",
+      "borderRadius": "10px",
+      "boxShadow": "0 1px 3px rgba(11,60,140,0.05)"
+    },
+    "panel": {
+      "extends": "card",
+      "structure": [
+        "panel-head: flex row, title block left (panelTitle + panelSubtitle), optional action link right, bottom border separator",
+        "panel body: varies by content (pipeline / table / list)"
+      ]
+    },
+    "kpiCard": {
+      "extends": "card",
+      "padding": "16px 18px",
+      "structure": [
+        "kpi-top: label (left) + icon chip in blue.100 bg with blue.700 icon (right)",
+        "kpi-value: big mono number",
+        "kpi-delta: small colored trend line — up=success, down=danger, flat=slate400, using ▲/▼/— glyphs"
+      ]
+    },
+    "sidebarNavItem": {
+      "default": { "color": "#C7D7F5", "background": "transparent" },
+      "hover": { "color": "white", "background": "rgba(255,255,255,0.06)" },
+      "active": { "color": "blue.900", "background": "white", "weight": 600 },
+      "optionalBadge": "pill on the right showing a count, light tint on active state (blue.100 bg / blue.700 text), translucent white on default state"
+    },
+    "statusPill": {
+      "shape": "fully rounded (20px radius), inline-flex with leading dot",
+      "variants": {
+        "queued": { "background": "#F1F3F8", "color": "slate600" },
+        "progress": { "background": "blue.100", "color": "blue.700" },
+        "done": { "background": "successBg", "color": "success" },
+        "delay": { "background": "warningBg", "color": "warning" }
+      },
+      "rule": "Always pair a colored dot/glyph with a text label — never color alone."
+    },
+    "pipelineTracker": {
+      "description": "Signature component: horizontal sequence of circular station nodes connected by a line, representing the bakery's fixed production stations in order.",
+      "nodeStates": {
+        "pending": { "border": "border", "background": "white", "text": "slate400" },
+        "done": { "border": "blue.500", "background": "blue.100", "text": "blue.700" },
+        "active": { "border": "blue.600", "background": "blue.600", "text": "white", "extra": "box-shadow: 0 0 0 4px rgba(16,59,140,0.15) (glow ring)" }
+      },
+      "connectorLine": "2px solid border between nodes; turns blue.100/blue.500 tint once a station is done",
+      "labelBelow": "station name (body, semibold, ink) + count/status (mono, slate600, or blue.700 if active)"
+    },
+    "table": {
+      "header": "uppercase, letterspaced, slate400, no background, bottom border on the row",
+      "row": "13px body text, 1px border bottom, no zebra striping, generous vertical padding (13px)",
+      "idColumn": "mono, semibold, blue.900",
+      "statusColumn": "uses statusPill component",
+      "timeColumn": "mono, slate600"
+    },
+    "listRow": {
+      "description": "Used for staff-on-shift and alert lists inside side panels.",
+      "structure": "avatar/dot (left) + name/title + subtext (stacked) + trailing status indicator (right, e.g. presence dot or none)",
+      "divider": "1px border bottom between rows, none on last row"
+    },
+    "topbar": {
+      "branchSelector": "pill-shaped button, white bg, border, status dot (success green) + branch name + chevron",
+      "clock": "mono, semibold, blue.700 text on blue.100 chip background",
+      "iconButton": "36x36px white square with border and 9px radius, optional red notification ping dot top-right",
+      "avatar": "circular, initials in display font, blue.700/blue.600 background, white text"
+    },
+    "buttonsAndLinks": {
+      "panelActionLink": "12px semibold blue.700 text with trailing chevron icon, no background, hover underline optional",
+      "primaryButtonGuideline": "Not yet defined in mockup — when added, use blue.600 background, white text, 9px radius, 8-10px vertical padding, matches icon-button sizing conventions"
+    }
+  },
+
+  "iconography": {
+    "style": "Outline/stroke icons only (stroke-width 2), no filled icons except the brand mark.",
+    "size": "15-17px inside nav/buttons, 13px inside small chevrons/links",
+    "color": "Inherits from parent context — slate/blue per component rules above, never multi-color icons"
+  },
+
+  "spacingAndRadius": {
+    "borderRadiusDefault": "9-10px for cards, panels, buttons, chips",
+    "borderRadiusPill": "20px / fully rounded for status pills and the branch selector",
+    "borderRadiusAvatar": "50% (circular)",
+    "baseSpacingUnit": "2px increments, common values: 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 28",
+    "panelInnerPadding": "16-20px horizontal, 14-16px vertical for headers; 13px vertical per table/list row"
+  },
+
+  "interactionPatterns": {
+    "hoverStates": "Subtle background tint shift only (e.g. rgba(255,255,255,0.06) on dark sidebar, light blue tint on white surfaces). No scale/transform effects.",
+    "activeStates": "Solid fill (white on dark sidebar, blue.600 on pipeline nodes) signals current/selected state.",
+    "emptyStates": "Not yet defined — when needed, follow product voice: explain what's missing and the action to take, no filler copy.",
+    "motion": "Minimal. This system favors instant, low-latency feeling state changes over animated transitions, consistent with a POS/register tool used by floor staff."
+  },
+
+  "voiceAndContent": {
+    "tone": "Plain, operational, no marketing language. Labels name what the user controls (e.g. 'Orders Today', 'Active Stations') not abstract metrics jargon.",
+    "numberFormatting": "Use mono font for all literal numbers/IDs/timestamps so they read distinctly from labels.",
+    "statusWording": "Use short, concrete states: Queued, In progress, Ready, Delayed, Idle, Done — avoid synonyms or inconsistent terms across pages."
+  },
+
+  "knownEntities": {
+    "branches": ["Trinidad", "Tagbilaran", "Calape", "Panglao / Gallares"],
+    "productionStations": ["Scaling", "Mixing", "Proofing", "Shaping", "Baking", "Cooling", "Filling", "Decorating", "QC", "Packaging"],
+    "note": "When generating new pages, reuse these exact names for consistency across the system."
+  },
+
+  "aiUsageInstructions": [
+    "When asked to build a new page or component for this system, apply colorPalette, typography, layout, and components sections exactly as defined here — do not introduce new colors, fonts, or radii.",
+    "Reuse existing component patterns (kpiCard, panel, statusPill, table, listRow, pipelineTracker) rather than inventing new visual patterns for the same kind of content.",
+    "Keep the sidebar and topbar structure identical across all pages; only the main content area changes per page.",
+    "If a new status type is needed, extend statusPill.variants using the existing 4-color status logic (success/warning/danger/neutral) rather than adding a new hue.",
+    "If new entity names (branches, stations, roles) are introduced, add them to knownEntities and reuse consistently."
+  ]
+}

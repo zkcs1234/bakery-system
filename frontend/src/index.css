@@ -1,0 +1,318 @@
+@import '@tabler/icons-webfont/dist/tabler-icons.css';
+
+/* Design System: BreadCo Production Console - Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Design System: Color Palette */
+    --blue-950: #01102B;
+    --blue-900: #051D4D;
+    --blue-700: #0B2E70;
+    --blue-600: #103B8C;
+    --blue-500: #1E4FAD;
+    --blue-100: #DEE7F9;
+    --blue-50: #EEF2FA;
+
+    --white: #FFFFFF;
+    --ink: #0E1B33;
+    --slate-600: #48597A;
+    --slate-400: #8C9AB8;
+    --border: #DCE6F7;
+
+    --success: #0F9D58;
+    --success-bg: #E6F7EE;
+    --warning: #C97A0E;
+    --warning-bg: #FCF1DF;
+    --danger: #D6394A;
+    --danger-bg: #FCE9EB;
+
+    --sidebar-width: 320px;
+    --topbar-height: 56px;
+  }
+
+  body {
+    @apply bg-blue-50 text-ink antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  h1, h2, h3 {
+    @apply font-display;
+  }
+
+  h1 {
+    @apply text-pageTitle text-blue-950;
+  }
+
+  h2 {
+    @apply text-panelTitle text-blue-950;
+  }
+}
+
+@layer components {
+  /* Card - Design System */
+  .card {
+    @apply bg-white rounded-[10px] shadow-card border border-border p-4;
+  }
+  .card-md {
+    @apply bg-white rounded-[10px] shadow-card border border-border p-5;
+  }
+
+  /* Panel - Design System */
+  .panel {
+    @apply bg-white rounded-[10px] shadow-card border border-border;
+  }
+  .panel-head {
+    @apply flex items-center justify-between px-5 py-4 border-b border-border;
+  }
+  .panel-title {
+    @apply font-display text-panelTitle text-blue-950;
+  }
+  .panel-subtitle {
+    @apply font-body text-panelSubtitle text-slate-600 mt-0.5;
+  }
+
+  /* KPI Card - Design System */
+  .kpi-card {
+    @apply card p-4;
+  }
+  .kpi-top {
+    @apply flex items-center justify-between mb-2;
+  }
+  .kpi-label {
+    @apply text-kpiLabel text-slate-600 font-body;
+  }
+  .kpi-icon-chip {
+    @apply w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center;
+  }
+  .kpi-icon {
+    @apply text-blue-700;
+  }
+  .kpi-value {
+    @apply text-kpiValue text-blue-950 font-mono;
+  }
+  .kpi-delta {
+    @apply text-kpiDelta font-body flex items-center gap-1;
+  }
+  .kpi-delta-up {
+    @apply text-success;
+  }
+  .kpi-delta-down {
+    @apply text-danger;
+  }
+  .kpi-delta-flat {
+    @apply text-slate-400;
+  }
+
+  /* Status Pill - Design System */
+  .status-pill {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-pillLabel font-body;
+  }
+  .status-pill-queued {
+    @apply bg-[#F1F3F8] text-slate-600;
+  }
+  .status-pill-progress {
+    @apply bg-blue-100 text-blue-700;
+  }
+  .status-pill-done {
+    @apply bg-successBg text-success;
+  }
+  .status-pill-delay {
+    @apply bg-warningBg text-warning;
+  }
+  .status-dot {
+    @apply w-1.5 h-1.5 rounded-full;
+  }
+
+  /* Sidebar Nav Item - Design System */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-navItem font-body
+           text-[#C7D7F5] hover:text-white hover:bg-[rgba(255,255,255,0.06)]
+           transition-colors cursor-pointer;
+  }
+  .nav-item.active {
+    @apply text-blue-900 bg-white font-semibold;
+  }
+  .nav-item-badge {
+    @apply px-2 py-0.5 rounded-full text-xs font-semibold;
+  }
+  .nav-item-badge-active {
+    @apply bg-blue-100 text-blue-700;
+  }
+  .nav-item-badge-default {
+    @apply bg-[rgba(255,255,255,0.15)] text-[#C7D7F5];
+  }
+
+  /* Table - Design System */
+  .table-wrapper {
+    @apply overflow-x-auto rounded-[10px] border border-border;
+  }
+  .table {
+    @apply w-full;
+  }
+  .table thead tr {
+    @apply border-b border-border;
+  }
+  .table th {
+    @apply px-4 py-3 text-left text-tableHeader font-body text-slate-400 uppercase tracking-wider;
+  }
+  .table td {
+    @apply px-4 py-3 border-b border-border text-tableCell font-body text-ink;
+  }
+  .table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .table tbody tr:hover td {
+    @apply bg-blue-50/50;
+  }
+  .table-mono {
+    @apply font-mono text-monoData text-blue-900;
+  }
+  .table-time {
+    @apply font-mono text-monoData text-slate-600;
+  }
+
+  /* Buttons - Design System */
+  .btn {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-[9px] text-sm font-body font-medium
+           transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
+  }
+  .btn-secondary {
+    @apply btn bg-blue-50 text-blue-700 hover:bg-blue-100 focus:ring-blue-400;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-blue-700 hover:bg-blue-50 focus:ring-blue-300;
+  }
+  .btn-danger {
+    @apply btn bg-danger text-white hover:bg-red-700 focus:ring-red-500;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  .btn-icon {
+    @apply w-9 h-9 rounded-[9px] bg-white border border-border flex items-center justify-center text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-colors;
+  }
+
+  /* Panel Action Link - Design System */
+  .panel-action-link {
+    @apply text-sm font-semibold text-blue-700 flex items-center gap-1 hover:underline;
+  }
+
+  /* Form inputs - Design System */
+  .input {
+    @apply w-full px-3 py-2 rounded-[9px] border border-border bg-white text-sm font-body
+           focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
+           placeholder-slate-400 transition-shadow;
+  }
+  .label {
+    @apply block text-xs font-medium text-slate-600 mb-1 font-body;
+  }
+
+  /* Branch Selector - Design System */
+  .branch-selector {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-border text-sm font-body text-ink;
+  }
+  .branch-selector-dot {
+    @apply w-2 h-2 rounded-full bg-success;
+  }
+
+  /* Clock - Design System */
+  .clock {
+    @apply px-2.5 py-1 rounded-lg bg-blue-100 font-mono text-sm font-semibold text-blue-700;
+  }
+
+  /* Avatar - Design System */
+  .avatar {
+    @apply w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-display text-sm font-semibold;
+  }
+  .avatar-sm {
+    @apply w-7 h-7 text-xs;
+  }
+
+  /* Alert boxes - Design System */
+  .alert {
+    @apply rounded-lg p-3 text-sm font-body;
+  }
+  .alert-danger {
+    @apply bg-dangerBg text-danger border border-danger/20;
+  }
+  .alert-warning {
+    @apply bg-warningBg text-warning border border-warning/20;
+  }
+  .alert-success {
+    @apply bg-successBg text-success border border-success/20;
+  }
+  .alert-info {
+    @apply bg-blue-50 text-blue-700 border border-blue-100;
+  }
+
+  /* Pipeline Tracker - Design System */
+  .pipeline-node {
+    @apply flex flex-col items-center gap-1;
+  }
+  .pipeline-node-circle {
+    @apply w-10 h-10 rounded-full border-2 flex items-center justify-center font-mono text-sm font-semibold;
+  }
+  .pipeline-node-pending {
+    @apply border-border bg-white text-slate-400;
+  }
+  .pipeline-node-done {
+    @apply border-blue-500 bg-blue-100 text-blue-700;
+  }
+  .pipeline-node-active {
+    @apply border-blue-600 bg-blue-600 text-white;
+  }
+  .pipeline-connector {
+    @apply h-0.5 w-8 bg-border;
+  }
+  .pipeline-connector-done {
+    @apply bg-blue-100;
+  }
+
+  /* List Row - Design System */
+  .list-row {
+    @apply flex items-center gap-3 py-3 px-4 border-b border-border;
+  }
+  .list-row:last-child {
+    @apply border-b-0;
+  }
+  .list-row:hover {
+    @apply bg-blue-50/50;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+  .badge-success { @apply badge bg-successBg text-success; }
+  .badge-warning { @apply badge bg-warningBg text-warning; }
+  .badge-danger { @apply badge bg-dangerBg text-danger; }
+  .badge-blue { @apply badge bg-blue-100 text-blue-700; }
+  .badge-gray { @apply badge bg-slate-100 text-slate-600; }
+
+  /* Progress bar */
+  .progress-bar {
+    @apply h-2 rounded-full bg-blue-100 overflow-hidden;
+  }
+  .progress-fill {
+    @apply h-full rounded-full transition-all duration-500;
+  }
+
+  /* Priority highlight */
+  .priority-row td {
+    @apply bg-warningBg;
+  }
+}
+
+/* Scrollbar styling - Design System */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #EEF2FA; }
+::-webkit-scrollbar-thumb { background: #8C9AB8; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #48597A; }
