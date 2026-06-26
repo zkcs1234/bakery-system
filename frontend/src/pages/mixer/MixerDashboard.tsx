@@ -655,13 +655,15 @@ function TaskCard({ task, isToday, dateStr, updating, allTasks, onUpdateStatus }
   };
 
   const handleCompleteRound = async (roundNum: number) => {
-    setRounds(prev => prev.map(r =>
-      r.roundNumber === roundNum ? { ...r, isDone: true } : r
-    ));
-    // If all rounds done → complete task
+    // Build the updated rounds array synchronously FIRST, then apply it to state.
+    // Reading `rounds` directly and calling setRounds separately causes a stale
+    // closure: setRounds is async so `rounds` still holds the old value when we
+    // check allDone — meaning the task never gets marked completed.
     const updatedRounds = rounds.map(r =>
       r.roundNumber === roundNum ? { ...r, isDone: true } : r
     );
+    setRounds(updatedRounds);
+
     const allDone = updatedRounds.every(r => r.isDone);
     if (allDone) {
       await onUpdateStatus(task.id, dateStr, 'completed');
