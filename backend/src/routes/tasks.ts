@@ -349,6 +349,91 @@ router.patch(
   }
 );
 
+// ─── POST /api/tasks/:id/bake-outcome — baker logs outcome per load ───────────
+router.post(
+  '/:id/bake-outcome',
+  [
+    body('load_number').isInt({ min: 1 }),
+    body('batches').isInt({ min: 1 }),
+    body('good').isInt({ min: 0 }),
+    body('nasunog').optional().isInt({ min: 0 }),
+    body('hilaw').optional().isInt({ min: 0 }),
+    body('depormado').optional().isInt({ min: 0 }),
+    body('bumagsak').optional().isInt({ min: 0 }),
+    body('note').optional().isString(),
+  ],
+  async (req: Request, res: Response): Promise<void> => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) { res.status(400).json({ errors: errors.array() }); return; }
+
+    // Verify task exists and belongs to this user (or supervisor)
+    const { data: task, error: fetchErr } = await supabase
+      .from('tasks')
+      .select('id, assigned_to, task_role, status')
+      .eq('id', req.params.id)
+      .single();
+
+    if (fetchErr || !task) { res.status(404).json({ error: 'Task not found' }); return; }
+
+    const isSupervisorUser = ['supervisor', 'admin'].includes(req.user!.role);
+    if (!isSupervisorUser && task.assigned_to !== req.user!.id) {
+      res.status(403).json({ error: 'Not your task' });
+      return;
+    }
+
+    if (task.task_role !== 'baking') {
+      res.status(400).json({ error: 'Bake outcomes can only be logged for baking tasks' });
+      return;
+    }
+
+    const { load_number, batches, good, nasunog = 0, hilaw = 0, depormado = 0, bumagsak = 0, note } = req.body;
+
+    const payload = {
+      task_id:     req.params.id,
+      load_number,
+      batches,
+      good,
+      nasunog,
+      hilaw,
+      depormado,
+      bumagsak,
+      note:        note ?? null,
+      logged_by:   req.user!.id,
+      logged_at:   new Date().toISOString(),
+    };
+
+    // Try inserting into bake_outcomes table; fall back to system_logs if table doesn't exist
+    const { data: insertData, error: insertErr } = await supabase
+      .from('bake_outcomes')
+      .insert(payload)
+      .select()
+      .single();
+
+    if (!insertErr) {
+      await supabase.from('system_logs').insert({
+        user_id:   req.user!.id,
+        action:    'BAKE_OUTCOME_LOGGED',
+        entity:    'tasks',
+        entity_id: req.params.id,
+        meta:      payload,
+      });
+      res.json({ outcome: insertData });
+      return;
+    }
+
+    // Fallback: table doesn't exist — record in system_logs only
+    await supabase.from('system_logs').insert({
+      user_id:   req.user!.id,
+      action:    'BAKE_OUTCOME_FALLBACK',
+      entity:    'tasks',
+      entity_id: req.params.id,
+      meta:      payload,
+    });
+
+    res.json({ ok: true, fallback: true });
+  }
+);
+
 // ─── GET /api/tasks/debug/:plan_item_id — inspect task states (DEV ONLY) ─────
 router.get('/debug/:plan_item_id', isSupervisor, async (req: Request, res: Response) => {
   const { data: tasks, error } = await supabase

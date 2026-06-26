@@ -585,27 +585,22 @@ interface TaskCardProps {
 }
 
 function TaskCard({ task, isToday, dateStr, updating, allTasks, onUpdateStatus }: TaskCardProps) {
-  const [expanded, setExpanded]           = useState(false);
+  const [expanded, setExpanded]               = useState(false);
   const [batchesPerRound, setBatchesPerRound] = useState(2);
-  const [rounds, setRounds]               = useState<RoundState[]>([]);
-  const [started, setStarted]             = useState(false); // planner confirmed
+  const [rounds, setRounds]                   = useState<RoundState[]>([]);
+  const [started, setStarted]                 = useState(false); // planner confirmed
+  const [startError, setStartError]           = useState('');
 
-  const planItem  = task.production_plan_items as { products?: { name: string; dough_type: string } } | null;
+  const planItem  = task.production_plan_items as { products?: { name: string; dough_type: string }; tasks?: Array<{ task_role?: string; status?: string }> } | null;
   const product   = planItem?.products;
   const doughType = product?.dough_type ?? 'other';
   const steps     = getStepsForDoughType(doughType);
 
-  // scaler gate check
-  const getProductId = (t: Task) => {
-    const ppi = t.production_plan_items as { product_id?: string; products?: { id?: string } } | null;
-    return ppi?.product_id || ppi?.products?.id;
-  };
-  const currentProductId = getProductId(task);
-  const scalerTask = allTasks.find(t => {
-    const tRole = (t as { task_role?: string }).task_role;
-    return tRole === 'scaling' && getProductId(t) === currentProductId;
-  });
-  const scalerNotComplete = scalerTask && scalerTask.status !== 'completed';
+  // Scaler gate: read from planItem.tasks (populated by the /tasks/my endpoint's nested join)
+  // This correctly reflects the scaler's task status regardless of who is logged in.
+  const planTasks     = planItem?.tasks ?? [];
+  const scalerTasks   = planTasks.filter(t => t.task_role === 'scaling');
+  const scalerNotComplete = scalerTasks.length > 0 && scalerTasks.some(t => t.status !== 'completed');
 
   /* Build round states when user confirms plan */
   const initRounds = (bpr: number): RoundState[] => {
@@ -625,10 +620,19 @@ function TaskCard({ task, isToday, dateStr, updating, allTasks, onUpdateStatus }
   };
 
   const handleStartMixing = async () => {
-    if (!isToday || scalerNotComplete) return;
-    await onUpdateStatus(task.id, dateStr, 'in_progress');
-    setRounds(initRounds(batchesPerRound));
-    setStarted(true);
+    if (!isToday) return;
+    if (scalerNotComplete) {
+      setStartError('Scaling must be completed before mixing can begin.');
+      return;
+    }
+    setStartError('');
+    try {
+      await onUpdateStatus(task.id, dateStr, 'in_progress');
+      setRounds(initRounds(batchesPerRound));
+      setStarted(true);
+    } catch {
+      // error is already shown in the parent via loadError
+    }
   };
 
   const handleToggleStep = (roundNum: number, stepId: string) => {
@@ -759,6 +763,18 @@ function TaskCard({ task, isToday, dateStr, updating, allTasks, onUpdateStatus }
                 batchesPerRound={batchesPerRound}
                 onChangeBatchesPerRound={setBatchesPerRound}
               />
+              {scalerNotComplete && (
+                <div className="flex items-center gap-2 text-sm text-orange-600 bg-orange-50 border border-orange-100 rounded-lg px-3 py-2">
+                  <AlertTriangle size={12} />
+                  Waiting for scaler to complete this product before mixing
+                </div>
+              )}
+              {startError && (
+                <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                  <AlertTriangle size={12} />
+                  {startError}
+                </div>
+              )}
               <button
                 onClick={e => { e.stopPropagation(); handleStartMixing(); }}
                 disabled={updating === task.id || !isToday || !!scalerNotComplete}
@@ -770,9 +786,6 @@ function TaskCard({ task, isToday, dateStr, updating, allTasks, onUpdateStatus }
                   : <PlayCircle size={12} />}
                 Start mixing · {Math.ceil(task.batches_assigned / batchesPerRound)} round{Math.ceil(task.batches_assigned / batchesPerRound) > 1 ? 's' : ''}
               </button>
-              {scalerNotComplete && (
-                <p className="text-sm text-orange-600 text-center">⏳ Waiting for scaler to complete this product</p>
-              )}
             </>
           )}
 

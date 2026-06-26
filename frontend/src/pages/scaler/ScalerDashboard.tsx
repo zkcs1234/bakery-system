@@ -340,11 +340,13 @@ export default function ScalerDashboard() {
 
             return (
               <div key={dateStr} className={`panel overflow-hidden ${isToday ? 'ring-2 ring-blue-500' : ''}`}>
+                {/* ── Day header row ── */}
                 <div className="flex items-center gap-3 px-4 py-3 cursor-pointer bg-blue-50/30" onClick={() => toggleExpanded(dateStr)}>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-ink text-sm font-body">{day.format('dddd')}</p>
                       {isToday && <span className="status-pill status-pill-progress">TODAY</span>}
+                      {allDone && dayTasks.length > 0 && <span className="status-pill status-pill-done">ALL DONE</span>}
                     </div>
                     <p className="text-xs text-slate-500 font-mono">{day.format('MMMM D, YYYY')}</p>
                   </div>
@@ -353,6 +355,135 @@ export default function ScalerDashboard() {
                   </div>
                   {isOpen ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
                 </div>
+
+                {/* ── Expanded task list ── */}
+                {isOpen && (
+                  <div className="border-t border-border">
+                    {dayTasks.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-sm text-slate-400">
+                        <Scale size={24} className="mx-auto mb-2 text-slate-300" />
+                        No scaling tasks for {day.format('MMMM D, YYYY')}
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {dayTasks.map(task => {
+                          const planItem = task.production_plan_items as any;
+                          const product = planItem?.products;
+                          const ingList: any[] = task.ingredient_list ?? [];
+
+                          return (
+                            <div
+                              key={task.id}
+                              className={`px-4 py-3 space-y-3
+                                ${task.is_priority ? 'bg-orange-50/40' : ''}
+                                ${task.status === 'completed' ? 'opacity-60' : ''}`}
+                            >
+                              {/* Task header */}
+                              <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0
+                                  ${task.status === 'completed'   ? 'bg-sage-100 text-sage-600'
+                                  : task.status === 'in_progress' ? 'bg-amber-100 text-amber-600'
+                                  : 'bg-gray-100 text-gray-400'}`}
+                                >
+                                  {task.status === 'completed'
+                                    ? <CheckCircle2 size={16} />
+                                    : <Scale size={16} />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="font-semibold text-ink text-sm font-body">
+                                      {product?.name ?? 'Unknown product'}
+                                    </p>
+                                    {task.is_priority && (
+                                      <span className="badge-orange text-xs">PRIORITY</span>
+                                    )}
+                                    <span className={`badge text-xs
+                                      ${task.status === 'completed'   ? 'badge-green'
+                                      : task.status === 'in_progress' ? 'badge-amber'
+                                      : 'badge-gray'}`}
+                                    >
+                                      {task.status.replace('_', ' ')}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-slate-500 font-mono mt-0.5">
+                                    {task.batches_assigned} batch{task.batches_assigned > 1 ? 'es' : ''} to scale
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Ingredient list */}
+                              {ingList.length > 0 && (
+                                <div className="bg-slate-50 border border-border rounded-lg p-3 space-y-1.5">
+                                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                                    Ingredients — {task.batches_assigned} batch{task.batches_assigned > 1 ? 'es' : ''}
+                                  </p>
+                                  {ingList.map((ing: any, idx: number) => {
+                                    const gramTotal = ing.total_amount_g ?? (ing.amount_g != null ? ing.amount_g * task.batches_assigned : null);
+                                    const totalLabel = gramTotal != null
+                                      ? (gramTotal >= 1000 ? `${(gramTotal / 1000).toFixed(3)} kg` : `${gramTotal.toFixed(1)} g`)
+                                      : '—';
+                                    return (
+                                      <div key={idx} className="flex items-center justify-between gap-2">
+                                        <div className="min-w-0">
+                                          <span className="text-xs text-gray-700">{ing.ingredients?.name ?? '—'}</span>
+                                          {ing.notes && <span className="text-xs text-gray-400 italic ml-1">· {ing.notes}</span>}
+                                          {ing.is_optional && <span className="text-xs text-gray-400 ml-1">(optional)</span>}
+                                        </div>
+                                        <span className="text-xs font-mono font-semibold text-crust-700 flex-shrink-0">{totalLabel}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                              {/* Action buttons */}
+                              {task.status === 'pending' && (
+                                <button
+                                  onClick={() => isToday && updateStatus(task.id, dateStr, 'in_progress')}
+                                  disabled={updating === task.id || !isToday}
+                                  title={!isToday ? 'Can only start today\'s tasks' : undefined}
+                                  className="btn-secondary btn-sm w-full flex items-center justify-center gap-2"
+                                >
+                                  {updating === task.id
+                                    ? <Loader2 size={12} className="animate-spin" />
+                                    : <PlayCircle size={12} />}
+                                  Start scaling
+                                </button>
+                              )}
+
+                              {task.status === 'in_progress' && (
+                                <button
+                                  onClick={() => isToday && updateStatus(task.id, dateStr, 'completed')}
+                                  disabled={updating === task.id || !isToday}
+                                  title={!isToday ? 'Can only complete today\'s tasks' : undefined}
+                                  className="btn-success btn-sm w-full flex items-center justify-center gap-2"
+                                >
+                                  {updating === task.id
+                                    ? <Loader2 size={12} className="animate-spin" />
+                                    : <CheckCircle2 size={12} />}
+                                  Mark scaling complete
+                                </button>
+                              )}
+
+                              {task.status === 'completed' && (
+                                <div className="flex items-center justify-center gap-2 text-sm text-sage-600 py-1">
+                                  <CheckCircle2 size={14} />
+                                  Scaling complete
+                                </div>
+                              )}
+
+                              {!isToday && task.status !== 'completed' && (
+                                <p className="text-xs text-slate-400 text-center italic">
+                                  View only — tasks can only be started on their scheduled day
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

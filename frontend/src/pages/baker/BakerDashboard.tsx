@@ -408,7 +408,7 @@ function BakingLoadPanel({
     setSubmitting(true);
     setSubmitError('');
     try {
-      /* POST bake outcome to API */
+      // Persist the bake outcome to the backend
       await api.post(`/tasks/${taskId}/bake-outcome`, {
         load_number: load.loadNumber,
         batches:     load.batches,
@@ -512,10 +512,11 @@ interface TaskCardProps {
 }
 
 function TaskCard({ task, isToday, updating, allTasks, onUpdateStatus }: TaskCardProps) {
-  const [expanded, setExpanded]           = useState(false);
+  const [expanded, setExpanded]             = useState(false);
   const [batchesPerLoad, setBatchesPerLoad] = useState(1);
-  const [loads, setLoads]                 = useState<LoadState[]>([]);
-  const [started, setStarted]             = useState(false);
+  const [loads, setLoads]                   = useState<LoadState[]>([]);
+  const [started, setStarted]               = useState(false);
+  const [startError, setStartError]         = useState('');
 
   const planItem  = task.production_plan_items as {
     products?:        { name: string; oven_temp_c: number | null; bake_time_min: number | null };
@@ -549,10 +550,19 @@ function TaskCard({ task, isToday, updating, allTasks, onUpdateStatus }: TaskCar
   };
 
   const handleStartBaking = async () => {
-    if (!isToday || mixerNotDone) return;
-    await onUpdateStatus(task.id, 'in_progress');
-    setLoads(initLoads(batchesPerLoad));
-    setStarted(true);
+    if (!isToday) return;
+    if (mixerNotDone) {
+      setStartError('Mixing must be completed before baking can begin.');
+      return;
+    }
+    setStartError('');
+    try {
+      await onUpdateStatus(task.id, 'in_progress');
+      setLoads(initLoads(batchesPerLoad));
+      setStarted(true);
+    } catch {
+      // error is already shown in the parent via loadError
+    }
   };
 
   const handleToggleStep = (loadNum: number, stepId: string) => {
@@ -698,6 +708,12 @@ function TaskCard({ task, isToday, updating, allTasks, onUpdateStatus }: TaskCar
                 <div className="flex items-center gap-2 text-sm text-orange-600 bg-orange-50 border border-orange-100 rounded-lg px-3 py-2">
                   <AlertTriangle size={12} />
                   Waiting for mixer to complete this product before baking
+                </div>
+              )}
+              {startError && (
+                <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                  <AlertTriangle size={12} />
+                  {startError}
                 </div>
               )}
               <button
